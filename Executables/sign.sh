@@ -11,7 +11,7 @@ opkg install openssl-util
 openssl req -nodes -x509 -sha256 -newkey rsa:4096 -keyout "$HOME/.ssh/priv.key" -out "$HOME/.ssh/pub.crt" -days 365 -subj "/C=US/ST=Mass/L=Boston/O=BostonUniversity/OU=DEV/CN=www.bu.edu"
 
 # needed when you want to resign a file
-objcopy --remove-section=.sig
+objcopy --remove-section=.sig a.o
 
 # truncate the files
 dd bs=512 seek=1 of=nullbytes count=0 if=dummy.txt of=dummy.txt
