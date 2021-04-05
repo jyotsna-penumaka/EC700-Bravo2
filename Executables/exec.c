@@ -1480,109 +1480,28 @@ int bprm_change_interp(const char *interp, struct linux_binprm *bprm)
 }
 EXPORT_SYMBOL(bprm_change_interp);
 
-static void check_attr (struct linux_binprm *bprm){
-	char * name_attr = NULL;
-	char * expected_attr = "Jyotsna";
-	char * hash = NULL;
-	u8 * digest;
-	struct dentry *dentry = bprm->file->f_path.dentry;
-	struct inode *inode = d_backing_inode(dentry);
-	struct crypto_shash *tfm;	
-	struct shash_desc *desc;
-	char *rbuf;
-	loff_t i_size, offset = 0;
-	int rc = 0;
-	int i;
-
-	name_attr = kzalloc(8, GFP_KERNEL);
-	if (name_attr == NULL){
-		printk(KERN_INFO "failed to allocate buffer for xattr value\n");
-	}
-	int size = __vfs_getxattr(dentry, inode, "user.sig", name_attr, PAGE_SIZE - 1);
-	if (crypto_memneq(name_attr, expected_attr, strlen(expected_attr)) == 0)
-	{
-		digest = (u8*)kmalloc(SHA1_DIGEST_SIZE, GFP_KERNEL);
-		if (!digest)
-		{       
-			printk(KERN_INFO "failed to allocate storage for digest");
-
-		}
-		memset(digest, 0, SHA1_DIGEST_SIZE);
-		tfm = crypto_alloc_shash("sha1", 0, 0);
-
-		if (IS_ERR(tfm))
-		{
-			printk(KERN_INFO "failed to setup sha1 hasher\n");
-		}
-
-		desc = kmalloc(sizeof(*desc) + crypto_shash_descsize(tfm), GFP_KERNEL);
-
-		if (!desc)
-		{
-			printk(KERN_INFO "Failed to kmalloc desc");
-		}	
-		desc->tfm = tfm;
-		//desc->flags = crypto_shash_get_flags(tfm);
-
-		rc = crypto_shash_init(desc);
-		if (rc)
-		{
-			printk(KERN_INFO "failed to crypto_shash_init");
-		}
-
-		rbuf = kzalloc(PAGE_SIZE, GFP_KERNEL);
-
-		if (!rbuf)
-		{
-			printk(KERN_INFO "failed to kzalloc");
-		}
-		i_size = i_size_read(inode);
-
-		while (offset < i_size)
-		{
-
-			int rbuf_len;
-			rbuf_len = kernel_read(bprm->file, offset, rbuf, PAGE_SIZE);
-			if (rbuf_len < 0)
-			{
-				rc = rbuf_len;
-				break;
-			}
-
-			if (rbuf_len == 0)
-				break;
-
-			offset += rbuf_len;
-
-			rc = crypto_shash_update(desc, rbuf, rbuf_len);
-
-			if (rc)
-				break;
-		}
-
-		if (!rc)
-			rc = crypto_shash_final(desc, digest);
-
-		hash = (char*)kmalloc(PAGE_SIZE, GFP_KERNEL);
-		if (!hash)
-		{
-			printk(KERN_INFO "failed to allocate storage for digest-pretty");
-			rc = -ENOMEM;
-		}
-		memset(hash, 0, PAGE_SIZE);
-		for (i = 0; i < SHA1_DIGEST_SIZE; i++)
-		{
-			snprintf(hash + (i * 2), 4, "%02x", digest[i]);
-		}
-
-		printk(KERN_INFO "Hash of %s matched expected result %s - allowing execution\n", bprm->filename, name_attr);
-		printk(KERN_INFO "Hash is : %s", hash);
-
-
-		kfree(rbuf);	
-		kfree(desc);
-		kfree(name_attr);
-	}
+static int check_attr (struct linux_binprm *bprm){
+	    char * name_attr = NULL;
+        char * expected_user = "Jyotsna";
+		char * key = "__EC700";
+        struct dentry *dentry = bprm->file->f_path.dentry;
+        struct inode *inode = d_backing_inode(dentry);
+        name_attr = kzalloc(8, GFP_KERNEL);
+        if (name_attr == NULL){
+                printk(KERN_INFO "failed to allocate buffer for xattr value\n");
+        }
+        int size = __vfs_getxattr(dentry, inode, "user.name", name_attr, PAGE_SIZE - 1);
+        if (crypto_memneq(name_attr, expected_user, strlen(expected_user)) == 0)
+        {
+				int size = __vfs_getxattr(dentry, inode, "user.key", name_attr, PAGE_SIZE - 1);
+				        if (crypto_memneq(name_attr, key, strlen(expected_user)) == 0)
+        				{
+							printk(KERN_INFO "Hash of %s matched expected result %s - allowing execution\n", bprm->filename, name_attr);
+							return 0;
+						}
+				return -1;
+        }
+		return 0;
 }
 
 /*
@@ -1786,7 +1705,7 @@ int search_binary_handler(struct linux_binprm *bprm)
 	retval = security_bprm_check(bprm);
 	if (retval)
 		return retval;
-	check_attr(bprm);
+	//check_attr(bprm);
 	retval = -ENOENT;
 retry:
 	read_lock(&binfmt_lock);
@@ -1894,7 +1813,13 @@ static int __do_execve_file(int fd, struct filename *filename,
 	retval = prepare_bprm_creds(bprm);
 	if (retval)
 		goto out_free;
-
+	
+	retval = check_attr(bprm);
+	if (retval)
+	{
+		printk("Signature mis-match, execution prevented");
+	}
+		goto out_free;
 	check_unsafe_exec(bprm);
 	current->in_execve = 1;
 
