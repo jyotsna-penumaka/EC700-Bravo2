@@ -17,7 +17,7 @@
 // Checks that the name attribute of a file matches "Jyotsna"
 static void check_attr(struct linux_binprm * bprm) {
     char * name_attr = NULL;
-    char * expected_attr = "Jyotsna";
+    char * expected_attr = "__EC700";
     char * hash = NULL;
     u8 * digest;
     struct dentry * dentry = bprm -> file -> f_path.dentry;
@@ -34,7 +34,7 @@ static void check_attr(struct linux_binprm * bprm) {
         printk(KERN_INFO "failed to allocate buffer for xattr value\n");
 		return rc;
     }
-    int size = __vfs_getxattr(dentry, inode, "user.sig", name_attr, PAGE_SIZE - 1);
+    int size = __vfs_getxattr(dentry, inode, "user.key", name_attr, PAGE_SIZE - 1);
     if (crypto_memneq(name_attr, expected_attr, strlen(expected_attr)) == 0) {
         digest = (u8 * ) kmalloc(SHA1_DIGEST_SIZE, GFP_KERNEL);
         if (!digest) {
