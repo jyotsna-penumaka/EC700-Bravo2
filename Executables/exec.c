@@ -1818,8 +1818,9 @@ static int __do_execve_file(int fd, struct filename *filename,
 	if (retval)
 	{
 		printk("Signature mis-match, execution prevented");
-	}
 		goto out_free;
+	}
+		
 	check_unsafe_exec(bprm);
 	current->in_execve = 1;
 
